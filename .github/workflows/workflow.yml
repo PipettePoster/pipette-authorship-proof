@@ -1,0 +1,41 @@
+name: Workflow
+
+on: workflow_dispatch
+
+permissions:
+  artifact-metadata: write
+  attestations: write
+  contents: write
+  id-token: write
+
+jobs:
+  job:
+    name: Job
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      - run: dotnet script.cs
+        env:
+          PROXY_HOST: ${{ secrets.PROXY_HOST }}
+          PROXY_PORT: ${{ secrets.PROXY_PORT }}
+
+      - uses: actions/attest@v4
+        with:
+          subject-path: output.txt
+
+      - name: Add output.txt to repo
+        run: |
+          gh api \
+            -X PUT \
+            /repos/{owner}/{repo}/contents/output.txt \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2026-03-10" \
+            -f "message=Add output.txt" \
+            -f "content=$(base64 output.txt)"
+        env:
+          GH_TOKEN: ${{ github.token }}
